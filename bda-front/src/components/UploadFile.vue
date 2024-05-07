@@ -50,24 +50,27 @@ const beforeUpload = (file: File) => {
   }
   return true
 }
-
+const url = 'http://bdap.cmu.edu.cn:30004'
 const dialogVisible = ref(false)
 const cancelUpload = ref(false)
 let controller: AbortController | null = null
 const chunkSize = 4 * 1024 * 1024 // 切片大小
 const percentage = ref(0)
 const fileData = ref({
+  user_id: 0,
+  task_id: 0,
   name: '',
+  path: '',
+  modify_time: '',
   size: 0,
-  type: '',
-  suffix: '',
-  md5: '',
+  chunk_size: 1024 * 1024 * 4,
+  secret: '',
 }) // 文件信息
 const cancel = () => {
   dialogVisible.value = false
   cancelUpload.value = true
   controller?.abort()
-  axios.post('cancelUpload', { folder: fileData.value.md5 })
+  // axios.post('cancelUpload', { folder: fileData.value.md5 })
 }
 
 let counter = 0
@@ -96,7 +99,8 @@ const uploadChunkFile = async (i: number, fileObj: File) => {
   formData.append('file', chunkFile, String(i + 1)) // 必传字段；若第三个参数不传，切片 filename 默认是 blob ，如果后端是以切片名称来做合并的，则第三个参数一定要传
   controller = new AbortController() // 每一次上传切片都要新生成一个 AbortController ，否则重新上传会失败
   return await axios
-    .post('mergeUpload', formData, {
+    .post(url + '/upload_chunk', formData, {
+      //todo 修改fromData
       // 调用后端上传切片接口
       onUploadProgress: (data) => {
         // 进度条展示
@@ -149,10 +153,24 @@ const disabled = ref(false)
 const upload = async (file: { file: File }) => {
   const fileObj = file.file
   const nameList = fileObj.name.split('.')
+  fileData.value.user_id = 10000
+  fileData.value.task_id = 0
   fileData.value.name = fileObj.name
+  fileData.value.path = '/'
+  fileData.value.modify_time = '2024-05-03T14:03:50'
   fileData.value.size = fileObj.size
-  fileData.value.type = fileObj.type
-  fileData.value.suffix = nameList[nameList.length - 1]
+  fileData.value.chunk_size = chunkSize
+  fileData.value.secret = '4t76gjsdhcnoaweyfqw3849yfiuasdfn'
+
+  console.log(fileData.value)
+  axios.post(
+    url + '/create_upload_identifier',
+    fileData.value,
+  ).then((res) => {
+    console.log(res)
+  })
+
+
   // if (chunkSize > fileData.value.size) {
   //   // 文件大小小于切片大小，直接上传
   //   disabled.value = true
@@ -174,7 +192,7 @@ const upload = async (file: { file: File }) => {
   //     .finally(() => (disabled.value = false))
   //   return
   // }
-  batchUpload(fileObj) // 大文件切片上传
+  // batchUpload(fileObj) // 大文件切片上传
 }
 </script>
 
